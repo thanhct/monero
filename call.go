@@ -2,16 +2,19 @@ package monero
 
 import (
 	"bytes"
-	"crypto/md5"
-	"encoding/hex"
+	// "crypto/md5"
+	// "encoding/hex"
 	"encoding/json"
 	"fmt"
+	// "errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
-	"strings"
+	"io/ioutil"
+	// "github.com/gorilla/rpc/json"
+	// "github.com/haisum/rpcexample"
+	// "strings"
 )
 
 // ----------------------------------------------------------------------------
@@ -53,7 +56,8 @@ func NewCallClient(endpoint, username, password string) *CallClient {
 
 func (c *CallClient) Daemon(method string, req, rep interface{}) error {
 	client := &http.Client{}
-	reqest, _ := http.NewRequest("POST", c.endpoint, EncodeClientRequest(method, req))
+	data, _ :=  EncodeClientRequest(method, req)
+	reqest, _ := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(data))
 	reqest.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(reqest)
 	if err != nil {
@@ -63,81 +67,100 @@ func (c *CallClient) Daemon(method string, req, rep interface{}) error {
 	return DecodeClientResponse(resp.Body, rep)
 }
 
-func (c *CallClient) Wallet(method string, req, rep interface{}) error {
+func (c *CallClient) Wallet2(method string, req, rep interface{}) error {
 	client := &http.Client{}
-	reqest, _ := http.NewRequest("POST", c.endpoint, EncodeClientRequest(method, req))
+	log.Println("Rep: ", rep)
+	data, _ :=  EncodeClientRequest(method, req)
+	reqest, _ := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(data))
+	reqest.Header.Set("Content-Type", "application/json")
+	reqest.Header.Set("Connection", "Keep-Alive")
+	// fmt.Println("request: %s", reqest)
+	log.Println("request:", reqest)
 	resp, err := client.Do(reqest)
+	log.Println("response:", resp)
+	log.Println("response body:", resp.Body)
+	log.Println("response header:", resp.Header)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(ioutil.Discard, resp.Body)
-	if resp.StatusCode == http.StatusUnauthorized {
-		var authorization map[string]string = DigestAuthParams(resp)
-		// log.Println("authorization", authorization)
-		realmHeader := authorization["realm"]
-		qopHeader := authorization["qop"]
-		nonceHeader := authorization["nonce"]
-		algorithm := authorization["algorithm"]
-		realm := realmHeader
-		// A1
-		h := md5.New()
-		A1 := fmt.Sprintf("%s:%s:%s", c.username, realm, c.password)
-		io.WriteString(h, A1)
-		HA1 := hex.EncodeToString(h.Sum(nil))
-
-		// A2
-		h = md5.New()
-		A2 := fmt.Sprintf("POST:%s", "/json_rpc")
-		io.WriteString(h, A2)
-		HA2 := hex.EncodeToString(h.Sum(nil))
-
-		// response
-		cnonce := RandomKey()
-		response := H(strings.Join([]string{HA1, nonceHeader, nc, cnonce, qopHeader, HA2}, ":"))
-		AuthHeader := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", algorithm="%s", response="%s", qop=%s, nc=%s, cnonce="%s"`,
-			c.username, realmHeader, nonceHeader, "/json_rpc", algorithm, response, qopHeader, nc, cnonce)
-		reqests, _ := http.NewRequest("POST", c.endpoint, EncodeClientRequest(method, req))
-		headers := http.Header{
-			"User-Agent":      []string{"AtScale"},
-			"Accept":          []string{"*/*"},
-			"Accept-Encoding": []string{"identity"},
-			"Connection":      []string{"Keep-Alive"},
-			"Host":            []string{reqest.Host},
-			"Authorization":   []string{AuthHeader},
-			"Content-Type":    []string{"application/json"},
-		}
-		reqests.Header = headers
-		resp, err := client.Do(reqests)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		// data, err := ioutil.ReadAll(resp.Body)
-		// if err != nil {
-		// 	log.Println("read body error:", err)
-		// }
-		// log.Println("read body data2222:", string(data), resp.StatusCode)
-		return DecodeClientResponse(resp.Body, rep)
-	}
 	return DecodeClientResponse(resp.Body, rep)
 }
 
+func (c *CallClient) Wallet3(method string, req, rep interface{}) error {
+	client := &http.Client{}
+  data, err := EncodeClientRequest(method, req)
+  if err != nil {
+      return err
+  }
+  reqest, err := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(data))
+	log.Println("request:", reqest)
+	log.Println("request:", bytes.NewBuffer(data))
+  if err != nil {
+      return err
+  }
+  resp, err := client.Do(reqest)
+  if err != nil {
+      return err
+  }
+	respData, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respData))
+	log.Println("response:", resp)
+  defer resp.Body.Close()
+
+  // get a reader that can be "rewound"
+  buf := bytes.NewBuffer(nil)
+  if _, err := io.Copy(buf, resp.Body); err != nil {
+      return err
+  }
+  br := bytes.NewReader(buf.Bytes())
+
+  if _, err := io.Copy(ioutil.Discard, br); err != nil {
+      return err
+  }
+
+  // rewind
+  if _, err := br.Seek(0, 0); err != nil {
+      return err
+  }
+  return DecodeClientResponse(br, rep)
+}
+
+func (c *CallClient) Wallet(method string, req, rep interface{}) error {
+	client := &http.Client{}
+  data, err := EncodeClientRequest(method, req)
+  if err != nil {
+      return err
+  }
+  reqest, err := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(data))
+	log.Println("request:", reqest)
+	log.Println("request:", bytes.NewBuffer(data))
+  if err != nil {
+      return err
+  }
+  resp, err := client.Do(reqest)
+  if err != nil {
+      return err
+  }
+	respData, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respData))
+	log.Println("response:", resp)
+	err = DecodeClientResponse(bytes.NewReader(respData), rep)
+	log.Println("rep:", rep)
+	return err
+}
+
 // EncodeClientRequest encodes parameters for a JSON-RPC client request.
-func EncodeClientRequest(method string, args interface{}) *bytes.Reader {
+func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 	c := &clientRequest{
 		Version: "2.0",
 		Method:  method,
 		Params:  args,
 		Id:      uint64(rand.Int63()),
 	}
-	data, _ := json.Marshal(c)
-	return bytes.NewReader(data)
-
+	return json.Marshal(c)
 }
 
-// DecodeClientResponse decodes the response body of a client request into
-// the interface reply.
 func DecodeClientResponse(r io.Reader, reply interface{}) error {
 	var c clientResponse
 	if err := json.NewDecoder(r).Decode(&c); err != nil {

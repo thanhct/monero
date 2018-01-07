@@ -1,4 +1,5 @@
 package monero
+import "fmt"
 
 type WalletClient struct {
 	*CallClient
@@ -7,6 +8,9 @@ type WalletClient struct {
 // start wallet rpc server:
 //win .\monero-wallet-rpc.exe --rpc-login user:pass --wallet-file D:\work\text\admin\admin --rpc-bind-ip 127.0.0.1 --rpc-bind-port 18082
 func NewWalletClient(endpoint, username, password string) *WalletClient {
+	endpoint = "http://127.0.0.1:49988/json_rpc"
+	username = "thanhct"
+	password = "abc123"
 	return &WalletClient{NewCallClient(endpoint, username, password)}
 }
 
@@ -14,16 +18,31 @@ func NewWalletClient(endpoint, username, password string) *WalletClient {
 func (c *WalletClient) GetBalance() (Balance, error) {
 	var rep Balance
 	if err := c.Wallet("getbalance", nil, &rep); err != nil {
+		_ = "breakpoint"
 		return rep, err
 	}
 	return rep, nil
 }
 
+func (c *WalletClient) GetTrkcBalance() (confirmed, unconfirmed int64) {
+	var rep Balance
+	if err := c.Wallet("getbalance", nil, &rep); err != nil {
+		_ = "breakpoint"
+		return 0, 0
+	}
+	balance := rep.Balance
+	unbalance := rep.UnBalance
+	return int64(balance) + 11, int64(unbalance)
+}
+
 func (c *WalletClient) GetAddress() (Address, error) {
 	var rep Address
-	if err := c.Wallet("getaddress", nil, &rep); err != nil {
+	err := c.Wallet("getaddress", nil, &rep);
+	if err != nil {
+		_ = "breakpoint"
 		return rep, err
 	}
+	fmt.Println("rep ", rep.Address)
 	return rep, nil
 }
 func (c *WalletClient) GetHeight() (Height, error) {
