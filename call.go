@@ -6,9 +6,10 @@ import (
 	// "encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	// "errors"
 	"io"
-	"log"
+	// "github.com/op/go-logging"
 	"math/rand"
 	"net/http"
 	"io/ioutil"
@@ -16,6 +17,8 @@ import (
 	// "github.com/haisum/rpcexample"
 	// "strings"
 )
+
+// var log = logging.MustGetLogger("monero")
 
 // ----------------------------------------------------------------------------
 // Request and Response
@@ -133,8 +136,8 @@ func (c *CallClient) Wallet(method string, req, rep interface{}) error {
       return err
   }
   reqest, err := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(data))
-	log.Println("request:", reqest)
-	log.Println("request:", bytes.NewBuffer(data))
+	//log.Println("request:", reqest)
+	log.Println("request wallet:", bytes.NewBuffer(data))
   if err != nil {
       return err
   }
@@ -143,10 +146,12 @@ func (c *CallClient) Wallet(method string, req, rep interface{}) error {
       return err
   }
 	respData, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(respData))
-	log.Println("response:", resp)
+	fmt.Println("Response wallet: ==>")
+
+	log.Println("response wallet:", resp)
 	err = DecodeClientResponse(bytes.NewReader(respData), rep)
-	log.Println("rep:", rep)
+	//log.Println("rep:", rep)
+	//fmt.Println(string(rep))
 	return err
 }
 

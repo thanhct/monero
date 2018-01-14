@@ -1,5 +1,7 @@
 package monero
 import "fmt"
+// import "log"
+// import "io/ioutil"
 
 type WalletClient struct {
 	*CallClient
@@ -32,7 +34,7 @@ func (c *WalletClient) GetTrkcBalance() (confirmed, unconfirmed int64) {
 	}
 	balance := rep.Balance
 	unbalance := rep.UnBalance
-	return int64(balance) + 11, int64(unbalance)
+	return int64(balance), int64(unbalance)
 }
 
 func (c *WalletClient) GetAddress() (Address, error) {
@@ -42,7 +44,7 @@ func (c *WalletClient) GetAddress() (Address, error) {
 		_ = "breakpoint"
 		return rep, err
 	}
-	fmt.Println("rep ", rep.Address)
+	fmt.Println("rep ttc: ", rep.Address)
 	return rep, nil
 }
 func (c *WalletClient) GetHeight() (Height, error) {
@@ -53,6 +55,14 @@ func (c *WalletClient) GetHeight() (Height, error) {
 	return rep, nil
 }
 
+func (c *WalletClient) GetTrkcHeight() (int32, error) {
+	var rep Height
+	if err := c.Wallet("getheight", nil, &rep); err != nil {
+		return 0, err
+	}
+	return int32(rep.Height), nil
+}
+
 func (c *WalletClient) Transfer(req TransferInput) (Transfer, error) {
 	var rep Transfer
 	if err := c.Wallet("transfer", req, &rep); err != nil {
@@ -60,6 +70,7 @@ func (c *WalletClient) Transfer(req TransferInput) (Transfer, error) {
 	}
 	return rep, nil
 }
+
 func (c *WalletClient) TransferSplit(req TransferInput) (Transfer, error) {
 	var rep Transfer
 	if err := c.Wallet("transfer_split", req, &rep); err != nil {
@@ -75,6 +86,7 @@ func (c *WalletClient) GetTransfers(req GetTransferInput) (Transfer, error) {
 	}
 	return rep, nil
 }
+
 func (c *WalletClient) GetTransferByTxId(txid string) (Transfer, error) {
 	req := struct {
 		Txid string `json:"txid"`
@@ -89,6 +101,7 @@ func (c *WalletClient) GetTransferByTxId(txid string) (Transfer, error) {
 	}
 	return rep.Trade, nil
 }
+
 func (c *WalletClient) IncomingTransfers(transferType string) (Transfer, error) {
 	req := struct {
 		TransferType string `json:"transfer_type"`
@@ -100,6 +113,23 @@ func (c *WalletClient) IncomingTransfers(transferType string) (Transfer, error) 
 		return rep, err
 	}
 	return rep, nil
+}
+
+func (c *WalletClient) IncomingTrkcTransfers(transferType string) ([]IncomingTransfer, error) {
+	req := struct {
+		TransferType string `json:"transfer_type"`
+	}{
+		transferType,
+	}
+	var rep IncomingTransfers
+	if err := c.Wallet("incoming_transfers", req, &rep); err != nil {
+		return rep.Transfers, err
+	}
+
+	// log.Printf("Trkc Incoming trans txid: ", rep.Txid)
+
+	transfers := rep.Transfers
+	return transfers, nil
 }
 
 func (c *WalletClient) MakeIntegratedAddress(paymentId string) (IsAddress, error) {

@@ -45,7 +45,25 @@ type Transfer struct {
 	Timestamp int64  `json:"timestamp,omitempty"`
 	Txid      string `json:"txid,omitempty"`
 	Type      string `json:"type,omitempty"`
+	Result		[]string `json:"result"`
 }
+
+type IncomingTransfers struct {
+	Transfers []IncomingTransfer `json: "transfers"`
+}
+
+// "amount": 10000000000000,
+// "global_index": 216666,
+// "spent": true,
+// "tx_hash": "<366eaea6bc60931b0daa8a4ed0c86f736f56c273b3ce741caff76cd6a576772c>"
+
+type IncomingTransfer struct {
+	Amount uint64 `json: "amount"`
+	GlobalIndex uint64 `json: "global_index"`
+	Spent bool `json: "spent"`
+	TxHash string `json: "tx_hash"`
+}
+
 
 type TransferSplit struct {
 	FeeList    []uint64 `json:"fee_list"`
@@ -66,8 +84,6 @@ type TransferSplit struct {
 // 	Type      string `json:"type"`
 // }
 
-type IncomingTransfers struct {
-}
 
 /***************************************/
 type GetTransferInput struct {
